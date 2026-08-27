@@ -1,2 +1,16 @@
+[project]
+name = "a-b-testing-platform"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "pydantic==2.13.4",
+    "pandas==3.0.5",
+    "numpy==2.4.6",
+    "scipy==1.17.1",
+    "statsmodels==0.14.6",
+]
+
 [tool.vercel]
 entrypoint = "src.api.main:app"
