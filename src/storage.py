@@ -18,7 +18,11 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Iterator
 
-DB_PATH = os.environ.get("AB_PLATFORM_DB_PATH", os.path.join("data", "platform.db"))
+# Vercel Functions have ephemeral local storage. Keeping the demo database in
+# /tmp lets the read-only showcase boot successfully without pretending that
+# experiment data is durable across function instances.
+_default_db_path = "/tmp/a-b-testing-platform.db" if os.environ.get("VERCEL") else os.path.join("data", "platform.db")
+DB_PATH = os.environ.get("AB_PLATFORM_DB_PATH", _default_db_path)
 
 # One connection per thread, reused across calls -- FastAPI runs sync path
 # operations in a thread pool, so this still gives every request its own

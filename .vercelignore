@@ -2,10 +2,11 @@ venv/
 node_modules/
 .vercel/
 __pycache__/
-*.pyc
 .pytest_cache/
-data/real/*.csv
+tests/
 data/*.db
 data/*.db-wal
 data/*.db-shm
+data/real/
 data/simulated/
+reports/
