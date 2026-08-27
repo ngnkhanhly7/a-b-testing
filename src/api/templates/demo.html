@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>A/B Testing Platform Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2937;
+      --muted: #5b6472;
+      --line: #d8dee8;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --blue: #2463eb;
+      --teal: #0f9f8f;
+      --amber: #b7791f;
+      --rose: #d13f5c;
+      --green: #16845b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    header {
+      padding: 28px clamp(18px, 4vw, 48px) 18px;
+      border-bottom: 1px solid var(--line);
+      background: #ffffff;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      margin: 12px auto 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .status {
+      min-width: 172px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f9fafb;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto 48px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .tab {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 12px;
+      text-align: left;
+      font: inherit;
+    }
+
+    .tab[aria-selected="true"] {
+      border-color: var(--blue);
+      box-shadow: inset 0 0 0 1px var(--blue);
+    }
+
+    .tab strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .tab span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .panel h2, .panel h3 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .panel-head {
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge.good { color: #ffffff; background: var(--green); }
+    .badge.warn { color: #3f2a06; background: #f7d27c; }
+    .badge.bad { color: #ffffff; background: var(--rose); }
+
+    .content { padding: 18px; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfd;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .metric .value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .chart {
+      display: grid;
+      gap: 16px;
+      margin: 18px 0;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 84px 1fr 72px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .bar-label {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .track {
+      height: 22px;
+      border-radius: 999px;
+      background: #e8edf5;
+      overflow: hidden;
+    }
+
+    .bar {
+      height: 100%;
+      min-width: 4px;
+      border-radius: 999px;
+      transition: width 320ms ease;
+    }
+
+    .bar.a { background: var(--blue); }
+    .bar.b { background: var(--teal); }
+    .bar-value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    .callout {
+      border-left: 4px solid var(--blue);
+      background: #f3f7ff;
+      padding: 14px;
+      line-height: 1.5;
+      color: #26364e;
+    }
+
+    .callout.warn {
+      border-left-color: var(--amber);
+      background: #fff8e7;
+    }
+
+    .callout.bad {
+      border-left-color: var(--rose);
+      background: #fff1f4;
+    }
+
+    .look-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .look {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }
+
+    .look-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .look p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .link-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      padding: 8px 12px;
+      color: var(--ink);
+      background: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    @media (max-width: 820px) {
+      .topbar, .layout { display: block; }
+      .status { margin-top: 16px; }
+      .tabs, .metrics { grid-template-columns: 1fr; }
+      .panel + .panel { margin-top: 18px; }
+      .bar-row { grid-template-columns: 64px 1fr 58px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div>
+        <h1>A/B Testing Platform</h1>
+        <p class="subtitle">
+          A visual demo of the experiment pipeline: assignment checks, conversion lift,
+          sequential testing, sample-size warnings, and guardrail regressions.
+        </p>
+      </div>
+      <div class="status" id="status">Loading demo data...</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="tabs" id="tabs"></div>
+    <section class="layout">
+      <article class="panel">
+        <div class="panel-head">
+          <h2 id="scenario-title">Scenario</h2>
+          <span class="badge" id="scenario-badge">Loading</span>
+        </div>
+        <div class="content">
+          <div class="metrics">
+            <div class="metric">
+              <div class="label">Users</div>
+              <div class="value" id="users">-</div>
+            </div>
+            <div class="metric">
+              <div class="label">Lift</div>
+              <div class="value" id="lift">-</div>
+            </div>
+            <div class="metric">
+              <div class="label">p-value</div>
+              <div class="value" id="pvalue">-</div>
+            </div>
+          </div>
+
+          <h3>Conversion Rate</h3>
+          <div class="chart">
+            <div class="bar-row">
+              <div class="bar-label">Control</div>
+              <div class="track"><div class="bar a" id="bar-a"></div></div>
+              <div class="bar-value" id="rate-a">-</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Treatment</div>
+              <div class="track"><div class="bar b" id="bar-b"></div></div>
+              <div class="bar-value" id="rate-b">-</div>
+            </div>
+          </div>
+
+          <div class="callout" id="summary">Loading...</div>
+          <div class="links">
+            <a class="link-button" href="/docs">Open API Docs</a>
+            <a class="link-button" href="/health">Health Check</a>
+          </div>
+        </div>
+      </article>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <h3 id="side-title">Sequential Looks</h3>
+        </div>
+        <div class="content">
+          <div class="look-list" id="looks"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const state = { scenarios: [], selected: 0 };
+    const pct = (v) => `${(v * 100).toFixed(2)}%`;
+    const fmtP = (v) => v < 0.0001 ? v.toExponential(2) : v.toFixed(4);
+
+    function badgeClass(status) {
+      if (status === "winner") return "good";
+      if (status === "guardrail") return "bad";
+      return "warn";
+    }
+
+    function renderTabs() {
+      const tabs = document.querySelector("#tabs");
+      tabs.innerHTML = "";
+      state.scenarios.forEach((scenario, index) => {
+        const button = document.createElement("button");
+        button.className = "tab";
+        button.type = "button";
+        button.setAttribute("aria-selected", String(index === state.selected));
+        button.innerHTML = `<strong>${scenario.name}</strong><span>${scenario.story}</span>`;
+        button.addEventListener("click", () => {
+          state.selected = index;
+          render();
+        });
+        tabs.appendChild(button);
+      });
+    }
+
+    function renderLooks(scenario) {
+      const looks = document.querySelector("#looks");
+      looks.innerHTML = "";
+      const items = scenario.looks.length ? scenario.looks : [
+        { label: "Final analysis", users: scenario.users, recommendation: scenario.badge, message: scenario.summary }
+      ];
+      items.forEach((look) => {
+        const div = document.createElement("div");
+        div.className = "look";
+        div.innerHTML = `
+          <div class="look-title">
+            <span>${look.label}</span>
+            <span>${look.users.toLocaleString()} users</span>
+          </div>
+          <p>${look.message}</p>
+        `;
+        looks.appendChild(div);
+      });
+    }
+
+    function render() {
+      renderTabs();
+      const scenario = state.scenarios[state.selected];
+      const maxRate = Math.max(scenario.rates.control, scenario.rates.treatment, 0.01);
+      const badge = document.querySelector("#scenario-badge");
+
+      document.querySelector("#scenario-title").textContent = scenario.name;
+      badge.textContent = scenario.badge_text;
+      badge.className = `badge ${badgeClass(scenario.badge)}`;
+      document.querySelector("#users").textContent = scenario.users.toLocaleString();
+      document.querySelector("#lift").textContent = `${scenario.lift_pct >= 0 ? "+" : ""}${scenario.lift_pct.toFixed(1)}%`;
+      document.querySelector("#pvalue").textContent = fmtP(scenario.p_value);
+      document.querySelector("#rate-a").textContent = pct(scenario.rates.control);
+      document.querySelector("#rate-b").textContent = pct(scenario.rates.treatment);
+      document.querySelector("#bar-a").style.width = `${(scenario.rates.control / maxRate) * 100}%`;
+      document.querySelector("#bar-b").style.width = `${(scenario.rates.treatment / maxRate) * 100}%`;
+      document.querySelector("#summary").textContent = scenario.summary;
+      document.querySelector("#summary").className = `callout ${scenario.badge === "guardrail" ? "bad" : scenario.badge === "no_winner" ? "warn" : ""}`;
+      document.querySelector("#side-title").textContent = scenario.side_title;
+      renderLooks(scenario);
+    }
+
+    fetch("/demo/scenarios")
+      .then((res) => res.json())
+      .then((data) => {
+        state.scenarios = data.scenarios;
+        document.querySelector("#status").textContent = `Ready: ${data.scenarios.length} demo scenarios`;
+        render();
+      })
+      .catch((error) => {
+        document.querySelector("#status").textContent = "Demo data failed to load";
+        document.querySelector("#summary").textContent = error.message;
+      });
+  </script>
+</body>
+</html>
