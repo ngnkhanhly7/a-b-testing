@@ -1,451 +1,344 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>A/B Testing Platform Demo</title>
+  <title>Experiment Decision Center</title>
   <style>
     :root {
       color-scheme: light;
-      --ink: #1f2937;
-      --muted: #5b6472;
-      --line: #d8dee8;
-      --bg: #f6f7f9;
+      --ink: #17202a;
+      --muted: #657080;
+      --line: #d8dee6;
+      --soft: #f4f6f8;
       --panel: #ffffff;
-      --blue: #2463eb;
-      --teal: #0f9f8f;
-      --amber: #b7791f;
-      --rose: #d13f5c;
-      --green: #16845b;
+      --blue: #2563eb;
+      --teal: #0f8f83;
+      --green: #147a4f;
+      --green-soft: #eaf7f0;
+      --amber: #946200;
+      --amber-soft: #fff6dc;
+      --red: #b4233f;
+      --red-soft: #fff0f3;
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body {
       margin: 0;
+      color: var(--ink);
+      background: var(--soft);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--ink);
-      background: var(--bg);
-    }
-
-    header {
-      padding: 28px clamp(18px, 4vw, 48px) 18px;
-      border-bottom: 1px solid var(--line);
-      background: #ffffff;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      max-width: 1180px;
-      margin: 0 auto;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(28px, 4vw, 48px);
-      line-height: 1.05;
       letter-spacing: 0;
     }
 
-    .subtitle {
-      max-width: 760px;
-      margin: 12px auto 0;
-      color: var(--muted);
-      font-size: 16px;
-      line-height: 1.55;
+    button, select { font: inherit; }
+    button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #9cc1ff; outline-offset: 2px; }
+
+    .app-header { background: var(--panel); border-bottom: 1px solid var(--line); }
+    .header-inner, main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    .header-inner { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 750; }
+    .brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; color: #fff; background: var(--ink); font-size: 12px; }
+    .header-links { display: flex; align-items: center; gap: 8px; }
+    .header-links a { color: var(--muted); text-decoration: none; padding: 8px 10px; border-radius: 5px; font-size: 13px; font-weight: 650; }
+    .header-links a:hover { color: var(--ink); background: var(--soft); }
+    main { padding: 24px 0 48px; }
+
+    .experiment-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 340px); gap: 24px; align-items: end; margin-bottom: 20px; }
+    .eyebrow { color: var(--muted); font-size: 12px; font-weight: 750; text-transform: uppercase; }
+    h1 { margin: 5px 0 7px; font-size: 26px; line-height: 1.2; }
+    .story { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .scenario-field label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .scenario-field select { width: 100%; min-height: 42px; border: 1px solid #b9c2ce; border-radius: 6px; padding: 0 38px 0 12px; color: var(--ink); background: var(--panel); }
+
+    .decision { display: grid; grid-template-columns: 190px minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 18px 20px; border-left: 5px solid var(--green); background: var(--green-soft); margin-bottom: 18px; }
+    .decision.warn { border-color: var(--amber); background: var(--amber-soft); }
+    .decision.bad { border-color: var(--red); background: var(--red-soft); }
+    .decision-label { font-size: 12px; text-transform: uppercase; font-weight: 750; }
+    .decision-action { margin-top: 3px; font-size: 21px; font-weight: 780; }
+    .decision-copy { font-size: 14px; line-height: 1.55; }
+    .decision-owner { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); margin-bottom: 18px; }
+    .kpi { min-width: 0; padding: 16px 18px; border-right: 1px solid var(--line); }
+    .kpi:last-child { border-right: 0; }
+    .kpi-label { color: var(--muted); font-size: 12px; }
+    .kpi-value { margin-top: 6px; font-size: 24px; font-weight: 780; font-variant-numeric: tabular-nums; }
+    .kpi-detail { margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(290px, 0.8fr); gap: 18px; align-items: start; }
+    .section { background: var(--panel); border: 1px solid var(--line); margin-bottom: 18px; }
+    .section-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+    .section-head h2 { margin: 0; font-size: 15px; }
+    .section-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .section-body { padding: 18px; }
+
+    .variant-row { display: grid; grid-template-columns: 118px minmax(100px, 1fr) 82px 82px; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .variant-row:last-child { margin-bottom: 0; }
+    .variant-name strong { display: block; font-size: 13px; }
+    .variant-name span { color: var(--muted); font-size: 11px; }
+    .track { height: 16px; background: #e9edf2; overflow: hidden; }
+    .bar { height: 100%; min-width: 3px; transition: width 250ms ease; }
+    .bar.control { background: var(--blue); }
+    .bar.treatment { background: var(--teal); }
+    .rate, .count { text-align: right; font-variant-numeric: tabular-nums; }
+    .rate { font-size: 14px; font-weight: 750; }
+    .count { color: var(--muted); font-size: 12px; }
+
+    .ci-wrap { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .ci-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 12px; }
+    .ci-head span:last-child { color: var(--muted); }
+    .ci-axis { position: relative; height: 48px; margin: 0 26px; }
+    .ci-line { position: absolute; left: 0; right: 0; top: 17px; height: 2px; background: #d9dfe7; }
+    .ci-zero { position: absolute; top: 7px; bottom: 12px; left: 50%; width: 1px; background: #7c8795; }
+    .ci-range { position: absolute; top: 14px; height: 8px; background: var(--teal); min-width: 4px; }
+    .ci-dot { position: absolute; top: 10px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); transform: translateX(-50%); }
+    .ci-label { position: absolute; top: 30px; transform: translateX(-50%); color: var(--muted); font-size: 10px; white-space: nowrap; }
+
+    .checks { list-style: none; margin: 0; padding: 0; }
+    .check { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .check:first-child { padding-top: 0; }
+    .check:last-child { padding-bottom: 0; border: 0; }
+    .check-mark { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--green); font-size: 12px; font-weight: 800; }
+    .check-mark.warn { background: var(--amber); }
+    .check-mark.bad { background: var(--red); }
+    .check-title { font-size: 13px; font-weight: 700; }
+    .check-copy { margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .impact-number { font-size: 30px; font-weight: 780; font-variant-numeric: tabular-nums; }
+    .impact-number.negative { color: var(--red); }
+    .impact-label { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .impact-note { margin: 14px 0 0; font-size: 12px; line-height: 1.5; }
+    .meta { display: grid; gap: 13px; }
+    .meta-row { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; font-size: 12px; line-height: 1.4; }
+    .meta-row dt { color: var(--muted); }
+    .meta-row dd { margin: 0; font-weight: 650; }
+    .sample-progress { margin-top: 16px; }
+    .progress-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 7px; color: var(--muted); font-size: 11px; }
+    .progress-track { height: 8px; background: #e8edf2; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--blue); }
+
+    .look-chart { min-height: 170px; }
+    .look-chart svg { display: block; width: 100%; height: auto; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; color: var(--muted); font-size: 11px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 16px; height: 3px; display: inline-block; }
+    details { background: var(--panel); border: 1px solid var(--line); }
+    summary { cursor: pointer; padding: 14px 16px; font-size: 13px; font-weight: 700; }
+    pre { margin: 0; padding: 0 16px 16px; white-space: pre-wrap; color: var(--muted); font: 12px/1.55 Consolas, monospace; }
+    .loading { min-height: 360px; display: grid; place-items: center; color: var(--muted); }
+    .error { color: var(--red); }
+
+    @media (max-width: 840px) {
+      .experiment-head, .layout { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi:nth-child(2) { border-right: 0; }
+      .kpi:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .decision { grid-template-columns: 1fr; gap: 9px; }
+      .decision-owner { white-space: normal; }
     }
-
-    .status {
-      min-width: 172px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #f9fafb;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    main {
-      width: min(1180px, calc(100% - 32px));
-      margin: 24px auto 48px;
-    }
-
-    .tabs {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-
-    .tab {
-      cursor: pointer;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      color: var(--ink);
-      padding: 12px;
-      text-align: left;
-      font: inherit;
-    }
-
-    .tab[aria-selected="true"] {
-      border-color: var(--blue);
-      box-shadow: inset 0 0 0 1px var(--blue);
-    }
-
-    .tab strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 14px;
-    }
-
-    .tab span {
-      display: block;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.35;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 1.08fr 0.92fr;
-      gap: 18px;
-      align-items: start;
-    }
-
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      overflow: hidden;
-    }
-
-    .panel h2, .panel h3 {
-      margin: 0;
-      font-size: 18px;
-      letter-spacing: 0;
-    }
-
-    .panel-head {
-      padding: 18px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .badge {
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .badge.good { color: #ffffff; background: var(--green); }
-    .badge.warn { color: #3f2a06; background: #f7d27c; }
-    .badge.bad { color: #ffffff; background: var(--rose); }
-
-    .content { padding: 18px; }
-
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .metric {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 14px;
-      background: #fbfcfd;
-    }
-
-    .metric .label {
-      color: var(--muted);
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-
-    .metric .value {
-      font-size: 24px;
-      font-weight: 800;
-      line-height: 1.1;
-    }
-
-    .chart {
-      display: grid;
-      gap: 16px;
-      margin: 18px 0;
-    }
-
-    .bar-row {
-      display: grid;
-      grid-template-columns: 84px 1fr 72px;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .bar-label {
-      font-weight: 700;
-      font-size: 14px;
-    }
-
-    .track {
-      height: 22px;
-      border-radius: 999px;
-      background: #e8edf5;
-      overflow: hidden;
-    }
-
-    .bar {
-      height: 100%;
-      min-width: 4px;
-      border-radius: 999px;
-      transition: width 320ms ease;
-    }
-
-    .bar.a { background: var(--blue); }
-    .bar.b { background: var(--teal); }
-    .bar-value {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-    }
-
-    .callout {
-      border-left: 4px solid var(--blue);
-      background: #f3f7ff;
-      padding: 14px;
-      line-height: 1.5;
-      color: #26364e;
-    }
-
-    .callout.warn {
-      border-left-color: var(--amber);
-      background: #fff8e7;
-    }
-
-    .callout.bad {
-      border-left-color: var(--rose);
-      background: #fff1f4;
-    }
-
-    .look-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .look {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px;
-      background: #fbfcfd;
-    }
-
-    .look-title {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 7px;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .look p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    .link-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 38px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      padding: 8px 12px;
-      color: var(--ink);
-      background: #ffffff;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 14px;
-    }
-
-    @media (max-width: 820px) {
-      .topbar, .layout { display: block; }
-      .status { margin-top: 16px; }
-      .tabs, .metrics { grid-template-columns: 1fr; }
-      .panel + .panel { margin-top: 18px; }
-      .bar-row { grid-template-columns: 64px 1fr 58px; }
+    @media (max-width: 540px) {
+      .header-inner, main { width: min(100% - 22px, 1180px); }
+      .header-links a:first-child { display: none; }
+      .kpis { grid-template-columns: 1fr; }
+      .kpi, .kpi:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--line); }
+      .kpi:last-child { border-bottom: 0; }
+      .variant-row { grid-template-columns: 92px minmax(70px, 1fr) 64px; }
+      .variant-row .count { display: none; }
+      .decision, .section-body { padding: 15px; }
+      h1 { font-size: 22px; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="topbar">
-      <div>
-        <h1>A/B Testing Platform</h1>
-        <p class="subtitle">
-          A visual demo of the experiment pipeline: assignment checks, conversion lift,
-          sequential testing, sample-size warnings, and guardrail regressions.
-        </p>
-      </div>
-      <div class="status" id="status">Loading demo data...</div>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand"><span class="brand-mark">A/B</span><span>Experiment Decision Center</span></div>
+      <nav class="header-links" aria-label="Liên kết hệ thống"><a href="/health">System health</a><a href="/docs">API docs</a></nav>
     </div>
   </header>
 
   <main>
-    <div class="tabs" id="tabs"></div>
-    <section class="layout">
-      <article class="panel">
-        <div class="panel-head">
-          <h2 id="scenario-title">Scenario</h2>
-          <span class="badge" id="scenario-badge">Loading</span>
-        </div>
-        <div class="content">
-          <div class="metrics">
-            <div class="metric">
-              <div class="label">Users</div>
-              <div class="value" id="users">-</div>
-            </div>
-            <div class="metric">
-              <div class="label">Lift</div>
-              <div class="value" id="lift">-</div>
-            </div>
-            <div class="metric">
-              <div class="label">p-value</div>
-              <div class="value" id="pvalue">-</div>
-            </div>
-          </div>
+    <div id="loading" class="loading">Đang chuẩn bị dữ liệu demo...</div>
+    <div id="app" hidden>
+      <section class="experiment-head">
+        <div><div class="eyebrow" id="source-label"></div><h1 id="experiment-name"></h1><p class="story" id="story"></p></div>
+        <div class="scenario-field"><label for="scenario-select">Chọn tình huống để trình bày</label><select id="scenario-select"></select></div>
+      </section>
 
-          <h3>Conversion Rate</h3>
-          <div class="chart">
-            <div class="bar-row">
-              <div class="bar-label">Control</div>
-              <div class="track"><div class="bar a" id="bar-a"></div></div>
-              <div class="bar-value" id="rate-a">-</div>
-            </div>
-            <div class="bar-row">
-              <div class="bar-label">Treatment</div>
-              <div class="track"><div class="bar b" id="bar-b"></div></div>
-              <div class="bar-value" id="rate-b">-</div>
-            </div>
-          </div>
+      <section class="decision" id="decision">
+        <div><div class="decision-label">Khuyến nghị</div><div class="decision-action" id="decision-action"></div></div>
+        <div class="decision-copy" id="decision-copy"></div><div class="decision-owner" id="decision-owner"></div>
+      </section>
 
-          <div class="callout" id="summary">Loading...</div>
-          <div class="links">
-            <a class="link-button" href="/docs">Open API Docs</a>
-            <a class="link-button" href="/health">Health Check</a>
-          </div>
-        </div>
-      </article>
+      <section class="kpis" aria-label="Chỉ số chính">
+        <div class="kpi"><div class="kpi-label">Primary metric</div><div class="kpi-value" id="primary-rate"></div><div class="kpi-detail" id="primary-detail"></div></div>
+        <div class="kpi"><div class="kpi-label">Relative lift</div><div class="kpi-value" id="lift"></div><div class="kpi-detail" id="lift-detail"></div></div>
+        <div class="kpi"><div class="kpi-label">Mức tin cậy</div><div class="kpi-value" id="confidence"></div><div class="kpi-detail" id="confidence-detail"></div></div>
+        <div class="kpi"><div class="kpi-label">Quy mô mẫu</div><div class="kpi-value" id="users"></div><div class="kpi-detail" id="users-detail"></div></div>
+      </section>
 
-      <aside class="panel">
-        <div class="panel-head">
-          <h3 id="side-title">Sequential Looks</h3>
+      <div class="layout">
+        <div>
+          <section class="section">
+            <div class="section-head"><h2 id="metric-title">So sánh biến thể</h2><p>Tỷ lệ và khoảng tin cậy 95% của chênh lệch Treatment - Control.</p></div>
+            <div class="section-body">
+              <div class="variant-row"><div class="variant-name"><strong>Control</strong><span>Trải nghiệm hiện tại</span></div><div class="track"><div class="bar control" id="bar-control"></div></div><div class="rate" id="rate-control"></div><div class="count" id="count-control"></div></div>
+              <div class="variant-row"><div class="variant-name"><strong>Treatment</strong><span>Trải nghiệm mới</span></div><div class="track"><div class="bar treatment" id="bar-treatment"></div></div><div class="rate" id="rate-treatment"></div><div class="count" id="count-treatment"></div></div>
+              <div class="ci-wrap"><div class="ci-head"><strong id="ci-value"></strong><span>Đường 0 = không có khác biệt</span></div><div class="ci-axis"><div class="ci-line"></div><div class="ci-zero"></div><div class="ci-range" id="ci-range"></div><div class="ci-dot" id="ci-dot"></div><div class="ci-label" id="ci-low"></div><div class="ci-label" id="ci-high"></div></div></div>
+            </div>
+          </section>
+
+          <section class="section" id="looks-section"><div class="section-head"><h2>Độ chắc chắn qua từng lần xem kết quả</h2><p>Chỉ dừng khi bằng chứng vượt ngưỡng an toàn O'Brien-Fleming.</p></div><div class="section-body"><div class="look-chart" id="look-chart"></div></div></section>
+          <details><summary>Chi tiết kỹ thuật: SRM, p-value, sequential boundary</summary><pre id="technical-details"></pre></details>
         </div>
-        <div class="content">
-          <div class="look-list" id="looks"></div>
-        </div>
-      </aside>
-    </section>
+
+        <aside>
+          <section class="section"><div class="section-head"><h2>Điều kiện ra quyết định</h2><p>Một winner chỉ được rollout khi toàn bộ kiểm tra đều đạt.</p></div><div class="section-body"><ul class="checks" id="checks"></ul></div></section>
+          <section class="section"><div class="section-head"><h2>Tác động ước tính</h2><p>Quy đổi hiệu ứng quan sát trên mỗi 100.000 người dùng.</p></div><div class="section-body"><div class="impact-number" id="impact-number"></div><div class="impact-label" id="impact-label"></div><p class="impact-note" id="impact-note"></p></div></section>
+          <section class="section"><div class="section-head"><h2>Thiết kế thử nghiệm</h2></div><div class="section-body"><dl class="meta"><div class="meta-row"><dt>Giả thuyết</dt><dd id="hypothesis"></dd></div><div class="meta-row"><dt>Owner</dt><dd id="owner"></dd></div><div class="meta-row"><dt>Đối tượng</dt><dd id="audience"></dd></div><div class="meta-row"><dt>Thời gian</dt><dd id="runtime"></dd></div></dl><div class="sample-progress" id="sample-progress"></div></div></section>
+        </aside>
+      </div>
+    </div>
   </main>
 
   <script>
     const state = { scenarios: [], selected: 0 };
-    const pct = (v) => `${(v * 100).toFixed(2)}%`;
-    const fmtP = (v) => v < 0.0001 ? v.toExponential(2) : v.toFixed(4);
+    const $ = (selector) => document.querySelector(selector);
+    const pct = (value) => `${(value * 100).toFixed(2)}%`;
+    const signed = (value, digits = 1) => `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
+    const fmtP = (value) => value < 0.0001 ? value.toExponential(2) : value.toFixed(4);
+    const number = (value) => value.toLocaleString("vi-VN");
 
-    function badgeClass(status) {
-      if (status === "winner") return "good";
-      if (status === "guardrail") return "bad";
-      return "warn";
+    function decisionFor(scenario) {
+      if (scenario.badge === "winner") return { cls: "", action: "Roll out Treatment", symbol: "Đạt" };
+      if (scenario.badge === "guardrail") return { cls: "bad", action: "Không rollout", symbol: "Chặn" };
+      return { cls: "warn", action: "Giữ Control", symbol: "Chờ" };
     }
 
-    function renderTabs() {
-      const tabs = document.querySelector("#tabs");
-      tabs.innerHTML = "";
-      state.scenarios.forEach((scenario, index) => {
-        const button = document.createElement("button");
-        button.className = "tab";
-        button.type = "button";
-        button.setAttribute("aria-selected", String(index === state.selected));
-        button.innerHTML = `<strong>${scenario.name}</strong><span>${scenario.story}</span>`;
-        button.addEventListener("click", () => {
-          state.selected = index;
-          render();
-        });
-        tabs.appendChild(button);
-      });
+    function setCheck(mark, title, copy, status) {
+      const li = document.createElement("li");
+      li.className = "check";
+      li.innerHTML = `<span class="check-mark ${status}">${mark}</span><div><div class="check-title">${title}</div><div class="check-copy">${copy}</div></div>`;
+      $("#checks").appendChild(li);
     }
 
-    function renderLooks(scenario) {
-      const looks = document.querySelector("#looks");
-      looks.innerHTML = "";
-      const items = scenario.looks.length ? scenario.looks : [
-        { label: "Final analysis", users: scenario.users, recommendation: scenario.badge, message: scenario.summary }
-      ];
-      items.forEach((look) => {
-        const div = document.createElement("div");
-        div.className = "look";
-        div.innerHTML = `
-          <div class="look-title">
-            <span>${look.label}</span>
-            <span>${look.users.toLocaleString()} users</span>
-          </div>
-          <p>${look.message}</p>
-        `;
-        looks.appendChild(div);
-      });
+    function renderChecks(s) {
+      $("#checks").innerHTML = "";
+      const sig = s.p_value < 0.05;
+      setCheck(sig ? "✓" : "!", "Bằng chứng thống kê", sig ? `p=${fmtP(s.p_value)}, khác biệt khó do ngẫu nhiên.` : `p=${fmtP(s.p_value)}, chưa đủ bằng chứng chọn winner.`, sig ? "" : "warn");
+      setCheck(s.srm.passed ? "✓" : "!", "Phân bổ traffic", s.srm.passed ? "SRM check đạt, hai nhóm được phân bổ đáng tin cậy." : "Tỷ lệ chia nhóm bất thường, chưa thể tin kết quả.", s.srm.passed ? "" : "bad");
+      if (s.sample_size) {
+        setCheck(s.sample_size.adequate ? "✓" : "!", "Đủ cỡ mẫu", `${number(s.sample_size.actual)} / ${number(s.sample_size.required)} users cần thiết.`, s.sample_size.adequate ? "" : "warn");
+      } else {
+        setCheck("✓", "Đủ dữ liệu đọc kết quả", `${number(s.users)} users đã được phân tích.`, "");
+      }
+      if (s.guardrails.length) {
+        const failed = s.guardrails.find((g) => g.regression_detected);
+        setCheck(failed ? "×" : "✓", "Guardrail không bị tổn hại", failed ? `${failed.name} giảm ${Math.abs(failed.relative_diff_pct).toFixed(1)}%, chặn rollout.` : "Không phát hiện regression ở guardrail.", failed ? "bad" : "");
+      } else {
+        setCheck("✓", "Không có tín hiệu rủi ro", "Không phát hiện metric phụ đi theo hướng xấu.", "");
+      }
+    }
+
+    function renderCI(s) {
+      const values = [s.ci_pp[0], s.ci_pp[1], s.absolute_diff_pp];
+      const extent = Math.max(1, ...values.map((v) => Math.abs(v))) * 1.25;
+      const pos = (v) => ((v + extent) / (extent * 2)) * 100;
+      const low = pos(s.ci_pp[0]);
+      const high = pos(s.ci_pp[1]);
+      $("#ci-range").style.left = `${low}%`;
+      $("#ci-range").style.width = `${Math.max(high - low, 0.6)}%`;
+      $("#ci-dot").style.left = `${pos(s.absolute_diff_pp)}%`;
+      $("#ci-low").style.left = `${low}%`;
+      $("#ci-high").style.left = `${high}%`;
+      $("#ci-low").textContent = signed(s.ci_pp[0], 2);
+      $("#ci-high").textContent = signed(s.ci_pp[1], 2);
+      $("#ci-value").textContent = `Chênh lệch ${signed(s.absolute_diff_pp, 2)} điểm %`;
+    }
+
+    function renderLooks(looks) {
+      const section = $("#looks-section");
+      if (!looks.length) { section.hidden = true; return; }
+      section.hidden = false;
+      const w = 680, h = 190, left = 42, right = 18, top = 12, bottom = 34;
+      const maxY = Math.max(1, ...looks.flatMap((l) => [l.z_stat, l.boundary])) * 1.15;
+      const x = (i) => left + (looks.length === 1 ? 0 : i / (looks.length - 1) * (w - left - right));
+      const y = (v) => top + (1 - v / maxY) * (h - top - bottom);
+      const points = (key) => looks.map((l, i) => `${x(i)},${y(l[key])}`).join(" ");
+      const dots = looks.map((l, i) => `<circle cx="${x(i)}" cy="${y(l.z_stat)}" r="5" fill="${l.z_stat > l.boundary ? "#147a4f" : "#2563eb"}"><title>${l.label}: z=${l.z_stat.toFixed(2)}, ngưỡng=${l.boundary.toFixed(2)}</title></circle>`).join("");
+      const labels = looks.map((l, i) => `<text x="${x(i)}" y="${h - 10}" text-anchor="middle" font-size="11" fill="#657080">${i + 1}</text>`).join("");
+      $("#look-chart").innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Bằng chứng thống kê so với ngưỡng dừng an toàn qua từng lần xem"><line x1="${left}" y1="${h-bottom}" x2="${w-right}" y2="${h-bottom}" stroke="#d8dee6"/><polyline points="${points("boundary")}" fill="none" stroke="#7c8795" stroke-width="2" stroke-dasharray="6 5"/><polyline points="${points("z_stat")}" fill="none" stroke="#2563eb" stroke-width="3"/>${dots}${labels}</svg><div class="legend"><span><i style="background:#2563eb"></i>Bằng chứng |z|</span><span><i style="background:#7c8795"></i>Ngưỡng dừng an toàn</span></div>`;
+    }
+
+    function renderSample(s) {
+      const box = $("#sample-progress");
+      if (!s.sample_size) { box.innerHTML = ""; return; }
+      const progress = Math.min(100, s.sample_size.actual / s.sample_size.required * 100);
+      box.innerHTML = `<div class="progress-head"><span>Tiến độ cỡ mẫu</span><strong>${progress.toFixed(0)}%</strong></div><div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>`;
     }
 
     function render() {
-      renderTabs();
-      const scenario = state.scenarios[state.selected];
-      const maxRate = Math.max(scenario.rates.control, scenario.rates.treatment, 0.01);
-      const badge = document.querySelector("#scenario-badge");
-
-      document.querySelector("#scenario-title").textContent = scenario.name;
-      badge.textContent = scenario.badge_text;
-      badge.className = `badge ${badgeClass(scenario.badge)}`;
-      document.querySelector("#users").textContent = scenario.users.toLocaleString();
-      document.querySelector("#lift").textContent = `${scenario.lift_pct >= 0 ? "+" : ""}${scenario.lift_pct.toFixed(1)}%`;
-      document.querySelector("#pvalue").textContent = fmtP(scenario.p_value);
-      document.querySelector("#rate-a").textContent = pct(scenario.rates.control);
-      document.querySelector("#rate-b").textContent = pct(scenario.rates.treatment);
-      document.querySelector("#bar-a").style.width = `${(scenario.rates.control / maxRate) * 100}%`;
-      document.querySelector("#bar-b").style.width = `${(scenario.rates.treatment / maxRate) * 100}%`;
-      document.querySelector("#summary").textContent = scenario.summary;
-      document.querySelector("#summary").className = `callout ${scenario.badge === "guardrail" ? "bad" : scenario.badge === "no_winner" ? "warn" : ""}`;
-      document.querySelector("#side-title").textContent = scenario.side_title;
-      renderLooks(scenario);
+      const s = state.scenarios[state.selected];
+      const decision = decisionFor(s);
+      $("#scenario-select").value = String(state.selected);
+      $("#source-label").textContent = s.source === "real" ? (s.computed_live ? "Dữ liệu thật · tính trực tiếp" : "Dữ liệu thật · kết quả đã kiểm chứng") : "Demo mô phỏng · ground truth đã biết";
+      $("#experiment-name").textContent = s.name;
+      $("#story").textContent = s.story;
+      $("#decision").className = `decision ${decision.cls}`;
+      $("#decision-action").textContent = decision.action;
+      $("#decision-copy").textContent = s.verdict;
+      $("#decision-owner").textContent = `${decision.symbol} · ${s.owner}`;
+      $("#primary-rate").textContent = pct(s.rates.treatment);
+      $("#primary-detail").textContent = `Control ${pct(s.rates.control)}`;
+      $("#lift").textContent = `${signed(s.lift_pct)}%`;
+      $("#lift-detail").textContent = `${signed(s.absolute_diff_pp, 2)} điểm % tuyệt đối`;
+      $("#confidence").textContent = `${s.confidence}%`;
+      $("#confidence-detail").textContent = `p-value ${fmtP(s.p_value)}`;
+      $("#users").textContent = number(s.users);
+      $("#users-detail").textContent = `${number(s.group_sizes.control)} control · ${number(s.group_sizes.treatment)} treatment`;
+      $("#metric-title").textContent = s.primary_metric;
+      $("#rate-control").textContent = pct(s.rates.control);
+      $("#rate-treatment").textContent = pct(s.rates.treatment);
+      $("#count-control").textContent = `${number(s.group_sizes.control)} users`;
+      $("#count-treatment").textContent = `${number(s.group_sizes.treatment)} users`;
+      const maxRate = Math.max(s.rates.control, s.rates.treatment, 0.01) * 1.08;
+      $("#bar-control").style.width = `${s.rates.control / maxRate * 100}%`;
+      $("#bar-treatment").style.width = `${s.rates.treatment / maxRate * 100}%`;
+      renderCI(s);
+      renderChecks(s);
+      renderLooks(s.looks);
+      const impact = s.incremental_per_100k;
+      $("#impact-number").className = `impact-number ${impact < 0 ? "negative" : ""}`;
+      $("#impact-number").textContent = `${impact >= 0 ? "+" : ""}${number(impact)}`;
+      $("#impact-label").textContent = s.primary_metric === "Day-7 retention" ? "retained players / 100k users" : "conversions / 100k users";
+      $("#impact-note").textContent = "Ước tính tuyến tính từ hiệu ứng quan sát. Dùng để hình dung quy mô, không thay thế forecast doanh thu.";
+      $("#hypothesis").textContent = s.hypothesis;
+      $("#owner").textContent = s.owner;
+      $("#audience").textContent = s.audience;
+      $("#runtime").textContent = `${s.runtime_days} ngày`;
+      renderSample(s);
+      $("#technical-details").textContent = s.details;
     }
 
     fetch("/demo/scenarios")
-      .then((res) => res.json())
+      .then((response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); })
       .then((data) => {
         state.scenarios = data.scenarios;
-        document.querySelector("#status").textContent = `Ready: ${data.scenarios.length} demo scenarios`;
+        const select = $("#scenario-select");
+        data.scenarios.forEach((scenario, index) => {
+          const option = document.createElement("option");
+          option.value = String(index);
+          option.textContent = scenario.name;
+          select.appendChild(option);
+        });
+        select.addEventListener("change", (event) => { state.selected = Number(event.target.value); render(); });
+        $("#loading").hidden = true;
+        $("#app").hidden = false;
         render();
       })
-      .catch((error) => {
-        document.querySelector("#status").textContent = "Demo data failed to load";
-        document.querySelector("#summary").textContent = error.message;
-      });
+      .catch((error) => { $("#loading").classList.add("error"); $("#loading").textContent = `Không tải được demo: ${error.message}`; });
   </script>
 </body>
 </html>

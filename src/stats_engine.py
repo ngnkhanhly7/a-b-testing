@@ -37,14 +37,14 @@ def _conclusion_text(result_kwargs: dict) -> str:
 
     if not result_kwargs["is_significant"]:
         return (
-            f"Không đủ bằng chứng để kết luận có khác biệt giữa 2 nhóm "
+            f"Not enough evidence to conclude a difference between the two groups "
             f"(p={result_kwargs['p_value']:.4f} >= alpha={alpha})."
         )
 
-    direction = "cao hơn" if diff > 0 else "thấp hơn"
+    direction = "higher than" if diff > 0 else "lower than"
     return (
-        f"Treatment {direction} Control {abs(rel):.2f}% (chênh lệch tuyệt đối "
-        f"{diff:+.4f}), tin cậy {(1 - alpha) * 100:.0f}%, "
+        f"Treatment is {direction} Control by {abs(rel):.2f}% (absolute difference "
+        f"{diff:+.4f}), {(1 - alpha) * 100:.0f}% confidence, "
         f"CI: [{ci_low:+.4f}, {ci_high:+.4f}]."
     )
 

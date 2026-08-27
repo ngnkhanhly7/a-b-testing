@@ -49,13 +49,13 @@ def check_sample_size(n_actual: int, n_required: int) -> SampleSizeCheck:
     """Warn instead of silently trusting a result computed on too few users."""
     is_adequate = n_actual >= n_required
     if is_adequate:
-        message = f"Cỡ mẫu đủ ({n_actual} >= {n_required} yêu cầu)."
+        message = f"Sample size adequate ({n_actual} >= {n_required} required)."
     else:
         message = (
-            f"CẢNH BÁO: cỡ mẫu hiện tại ({n_actual}) nhỏ hơn cỡ mẫu cần thiết "
-            f"({n_required}) để phát hiện hiệu ứng ở power đã cấu hình. Kết luận "
-            f"'không có khác biệt' ở giai đoạn này CHƯA đủ tin cậy -- có thể chỉ "
-            f"là thiếu mẫu, không phải thực sự không có hiệu ứng."
+            f"WARNING: current sample size ({n_actual}) is below the required "
+            f"({n_required}) needed to detect an effect at the configured power. A "
+            f"'no difference' conclusion at this stage is NOT yet reliable -- it may "
+            f"just be an underpowered sample, not a genuinely absent effect."
         )
     return SampleSizeCheck(n_actual=n_actual, n_required=n_required, is_adequate=is_adequate, message=message)
 
@@ -82,8 +82,8 @@ def main() -> None:
     # matches the target power, instead of eyeballing one run's p-value.
     n_replicates = 200
     for label, n_per_group in [
-        ("cỡ mẫu QUÁ NHỎ (30% yêu cầu)", int(n_required * 0.3)),
-        ("cỡ mẫu ĐỦ (đúng theo tính toán)", n_required),
+        ("sample size TOO SMALL (30% of required)", int(n_required * 0.3)),
+        ("sample size ADEQUATE (exactly as computed)", n_required),
     ]:
         n_total = n_per_group * 2
         detections = 0

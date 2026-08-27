@@ -26,26 +26,18 @@ DATA_PATH = "data/real/cookie_cats.csv"
 REPORT_PATH = "reports/cookie_cats_analysis.md"
 
 
-def main() -> None:
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
-
-    if not os.path.exists(DATA_PATH):
-        print(
-            f"Skipping Cookie Cats analysis: {DATA_PATH} not found.\n"
-            "Download it first with:\n"
-            "  kaggle datasets download -d yufengsui/mobile-games-ab-testing -p data/real --unzip"
-        )
-        return
-
-    df = pd.read_csv(DATA_PATH)
+def run_analysis(df: pd.DataFrame) -> dict:
+    """Runs the platform's own SRM check + stats engine on a Cookie Cats
+    dataframe (columns: version, retention_1, retention_7, sum_gamerounds).
+    Shared by the CLI report below and by the API demo page (src/api/main.py)
+    so both read from one live computation instead of the API duplicating
+    numbers that were only ever copy-pasted from a report file."""
+    df = df.copy()
     df["group"] = df["version"].map({"gate_30": "A", "gate_40": "B"})
-
     control = df[df.group == "A"]
     treatment = df[df.group == "B"]
 
     srm = check_srm({"A": len(control), "B": len(treatment)})
-
     ret1 = run_proportions_test(
         conversions_control=int(control.retention_1.sum()),
         n_control=len(control),
@@ -60,9 +52,36 @@ def main() -> None:
     )
     rounds = run_ttest(control.sum_gamerounds.to_numpy(dtype=float), treatment.sum_gamerounds.to_numpy(dtype=float))
 
+    return {
+        "n_total": len(df),
+        "n_control": len(control),
+        "n_treatment": len(treatment),
+        "srm": srm,
+        "retention_1": ret1,
+        "retention_7": ret7,
+        "rounds": rounds,
+    }
+
+
+def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    if not os.path.exists(DATA_PATH):
+        print(
+            f"Skipping Cookie Cats analysis: {DATA_PATH} not found.\n"
+            "Download it first with:\n"
+            "  kaggle datasets download -d yufengsui/mobile-games-ab-testing -p data/real --unzip"
+        )
+        return
+
+    df = pd.read_csv(DATA_PATH)
+    r = run_analysis(df)
+    srm, ret1, ret7, rounds = r["srm"], r["retention_1"], r["retention_7"], r["rounds"]
+
     report = f"""# Cookie Cats Analysis
 
-Dataset: {len(df)} users. gate_30 (A, control) = {len(control)}, gate_40 (B, treatment) = {len(treatment)}.
+Dataset: {r["n_total"]} users. gate_30 (A, control) = {r["n_control"]}, gate_40 (B, treatment) = {r["n_treatment"]}.
 
 ## Sample Ratio Mismatch check
 

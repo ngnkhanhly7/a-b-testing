@@ -57,18 +57,18 @@ class SequentialCheck:
         if self.recommendation == "stop_significant":
             return (
                 f"Sequential check (look {self.look_number}/{self.max_looks}): "
-                f"|z|={abs(self.z_stat):.3f} vượt ngưỡng O'Brien-Fleming {self.boundary:.3f} "
-                f"-- CÓ THỂ DỪNG, kết quả có ý nghĩa thống kê và an toàn với việc đã peek nhiều lần."
+                f"|z|={abs(self.z_stat):.3f} exceeds the O'Brien-Fleming boundary {self.boundary:.3f} "
+                f"-- SAFE TO STOP, the result is statistically significant and safe despite repeated peeking."
             )
         if self.recommendation == "stop_no_effect":
             return (
                 f"Sequential check (look {self.look_number}/{self.max_looks}): "
-                f"đã tới look cuối cùng mà chưa vượt ngưỡng -- DỪNG, kết luận không đủ bằng chứng có khác biệt."
+                f"reached the final look without crossing the boundary -- STOP, not enough evidence of a difference."
             )
         return (
             f"Sequential check (look {self.look_number}/{self.max_looks}): "
-            f"|z|={abs(self.z_stat):.3f} chưa vượt ngưỡng O'Brien-Fleming {self.boundary:.3f} "
-            f"-- TIẾP TỤC thu thập thêm dữ liệu, chưa được kết luận dựa trên p-value tĩnh."
+            f"|z|={abs(self.z_stat):.3f} has not crossed the O'Brien-Fleming boundary {self.boundary:.3f} "
+            f"-- CONTINUE collecting more data, no conclusion yet based on a static p-value."
         )
 
 
@@ -83,7 +83,7 @@ class PipelineResult:
     def summary(self) -> str:
         lines = []
         if self.srm.is_mismatched:
-            lines.append(f"⚠ SRM MISMATCH detected: {self.srm.observed} vs expected {self.srm.expected} (p={self.srm.p_value:.4g}). Kết quả bên dưới KHÔNG đáng tin cậy cho tới khi khắc phục lỗi chia nhóm.")
+            lines.append(f"⚠ SRM MISMATCH detected: {self.srm.observed} vs expected {self.srm.expected} (p={self.srm.p_value:.4g}). The results below are NOT trustworthy until the group-assignment bug is fixed.")
         else:
             lines.append(f"SRM check OK (p={self.srm.p_value:.4g}).")
 

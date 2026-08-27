@@ -18,6 +18,7 @@ Run with: uvicorn src.api.main:app --reload
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import uuid
 from contextlib import asynccontextmanager
@@ -32,8 +33,11 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from src import storage
+from src.analyze_cookie_cats import run_analysis as run_cookie_cats_analysis
 from src.assignment import assign_group
 from src.pipeline import ExperimentConfig, GuardrailConfig, analyze_experiment
+
+COOKIE_CATS_CSV = "data/real/cookie_cats.csv"
 
 
 @asynccontextmanager
@@ -149,11 +153,15 @@ def _scenario_payload(
     config: ExperimentConfig,
     badge: str,
     badge_text: str,
-    side_title: str,
+    hypothesis: str,
+    owner: str,
+    runtime_days: int,
+    audience: str,
 ) -> dict:
     result = analyze_experiment(df, config, look_number=config.max_looks if config.max_looks else None)
     rates = _rates_for(df)
     lift_pct = ((rates["treatment"] - rates["control"]) / rates["control"] * 100) if rates["control"] else 0.0
+
     looks = []
     if config.max_looks:
         for look in range(1, config.max_looks + 1):
@@ -161,27 +169,159 @@ def _scenario_payload(
             look_result = analyze_experiment(df.iloc[:n_so_far], config, look_number=look)
             looks.append(
                 {
-                    "label": f"Look {look}/{config.max_looks}",
+                    "label": f"Look {look}",
                     "users": n_so_far,
                     "recommendation": look_result.sequential.recommendation,
-                    "message": look_result.sequential.message,
+                    "z_stat": abs(float(look_result.sequential.z_stat)),
+                    "boundary": float(look_result.sequential.boundary),
                 }
             )
             if look_result.sequential.recommendation != "continue":
                 break
 
+    guardrails = [
+        {
+            "name": gname,
+            "regression_detected": g["regression_detected"],
+            "conclusion": g["test"].conclusion,
+            "control": float(g["test"].mean_control),
+            "treatment": float(g["test"].mean_treatment),
+            "relative_diff_pct": float(g["test"].relative_diff_pct),
+            "p_value": float(g["test"].p_value),
+        }
+        for gname, g in result.guardrails.items()
+    ]
+
+    # A single plain-language sentence for the headline -- everything else
+    # (raw sequential boundary math, SRM check, per-guardrail p-values) stays
+    # available in `details` behind a "show technical details" toggle, but
+    # this is the one sentence a non-technical viewer needs to read.
+    regressed = [g for g in guardrails if g["regression_detected"]]
+    if regressed:
+        verdict = (
+            f"Metric chính thắng (+{lift_pct:.1f}%), nhưng guardrail "
+            f"'{regressed[0]['name']}' bị ảnh hưởng xấu có ý nghĩa thống kê -- "
+            f"KHÔNG nên ship nếu chưa xử lý được đánh đổi này."
+        )
+    elif result.primary.is_significant:
+        verdict = (
+            f"Khác biệt có ý nghĩa thống kê (p={result.primary.p_value:.4g}) -- "
+            f"an toàn để dừng thử nghiệm và ship."
+        )
+    else:
+        verdict = (
+            f"Không đủ bằng chứng cho thấy có khác biệt thật (p={result.primary.p_value:.4g}) -- "
+            f"chưa nên ship dựa trên kết quả này."
+        )
+
     return {
         "name": name,
         "story": story,
+        "hypothesis": hypothesis,
+        "owner": owner,
+        "runtime_days": runtime_days,
+        "audience": audience,
+        "primary_metric": "Checkout conversion",
         "users": int(len(df)),
+        "group_sizes": {
+            "control": int((df.group == "A").sum()),
+            "treatment": int((df.group == "B").sum()),
+        },
         "rates": rates,
         "lift_pct": float(lift_pct),
+        "absolute_diff_pp": float(result.primary.diff * 100),
+        "ci_pp": [float(result.primary.ci_low * 100), float(result.primary.ci_high * 100)],
         "p_value": float(result.primary.p_value),
-        "summary": result.summary(),
+        "confidence": int((1 - result.primary.alpha) * 100),
+        "srm": {"passed": not result.srm.is_mismatched, "p_value": float(result.srm.p_value)},
+        "sample_size": (
+            {
+                "actual": int(result.sample_size_check.n_actual),
+                "required": int(result.sample_size_check.n_required),
+                "adequate": bool(result.sample_size_check.is_adequate),
+            }
+            if result.sample_size_check
+            else None
+        ),
+        "incremental_per_100k": int(round(result.primary.diff * 100_000)),
+        "verdict": verdict,
+        "guardrails": guardrails,
         "looks": looks,
+        "details": result.summary(),
         "badge": badge,
         "badge_text": badge_text,
-        "side_title": side_title,
+        "source": "simulated",
+    }
+
+
+def _real_data_scenario() -> dict:
+    """Cookie Cats (checkpoint 6): a real published mobile-game A/B test,
+    90,189 real users -- not simulated. If data/real/cookie_cats.csv has been
+    downloaded (see README), this runs the platform's own SRM check + stats
+    engine on it live, same as every other tab. If not, falls back to the
+    last validated numbers from reports/cookie_cats_analysis.md so the demo
+    page doesn't break for someone who hasn't downloaded the dataset --
+    `computed_live` tells the frontend which case it's looking at."""
+    computed_live = os.path.exists(COOKIE_CATS_CSV)
+    if computed_live:
+        df = pd.read_csv(COOKIE_CATS_CSV)
+        r = run_cookie_cats_analysis(df)
+        n_control, n_treatment = r["n_control"], r["n_treatment"]
+        control_rate, treatment_rate = r["retention_7"].mean_control, r["retention_7"].mean_treatment
+        p_value = r["retention_7"].p_value
+        ci_pp = [r["retention_7"].ci_low * 100, r["retention_7"].ci_high * 100]
+        srm_passed, srm_p_value = not r["srm"].is_mismatched, r["srm"].p_value
+    else:
+        control_rate, treatment_rate = 0.1902, 0.1820
+        n_control, n_treatment = 44700, 45489
+        p_value = 0.001554
+        ci_pp = [-1.33, -0.31]
+        srm_passed, srm_p_value = True, 0.008608
+
+    lift_pct = (treatment_rate - control_rate) / control_rate * 100
+    return {
+        "name": "Real data: Cookie Cats",
+        "story": "90,189 real mobile-game players. Does moving a level gate from 30 to 40 help day-7 retention?",
+        "hypothesis": "Moving the progression gate later will improve long-term player retention.",
+        "owner": "Game Economy",
+        "runtime_days": 14,
+        "audience": "New players on mobile",
+        "primary_metric": "Day-7 retention",
+        "users": n_control + n_treatment,
+        "group_sizes": {"control": n_control, "treatment": n_treatment},
+        "rates": {"control": control_rate, "treatment": treatment_rate},
+        "lift_pct": float(lift_pct),
+        "absolute_diff_pp": float((treatment_rate - control_rate) * 100),
+        "ci_pp": [float(ci_pp[0]), float(ci_pp[1])],
+        "p_value": float(p_value),
+        "confidence": 95,
+        "srm": {"passed": bool(srm_passed), "p_value": float(srm_p_value)},
+        "sample_size": None,
+        "incremental_per_100k": int(round((treatment_rate - control_rate) * 100_000)),
+        "verdict": (
+            f"Khác biệt có ý nghĩa thống kê (p={p_value:.4g}) -- nhưng theo hướng XẤU: "
+            f"retention ngày 7 của treatment thấp hơn control {abs(lift_pct):.1f}%. "
+            f"Không nên ship thay đổi này."
+        ),
+        "guardrails": [],
+        "looks": [],
+        "details": (
+            f"Dataset: {n_control + n_treatment} users. gate_30 (A, control) = {n_control}, "
+            f"gate_40 (B, treatment) = {n_treatment}.\n"
+            f"Retention Day 7: control={control_rate:.4f}, treatment={treatment_rate:.4f}, p={p_value:.4g}.\n"
+            "Matches known public analyses of this dataset (Kaggle/Medium).\n"
+            + (
+                "Computed live from data/real/cookie_cats.csv on this page load."
+                if computed_live
+                else "data/real/cookie_cats.csv not found -- showing last validated numbers from "
+                "reports/cookie_cats_analysis.md instead of a live computation. Download the "
+                "dataset (see README) to make this tab compute live."
+            )
+        ),
+        "badge": "guardrail",
+        "badge_text": "Don't ship",
+        "source": "real",
+        "computed_live": computed_live,
     }
 
 
@@ -218,7 +358,10 @@ def demo_scenarios():
                 ),
                 badge="winner",
                 badge_text="Safe to stop",
-                side_title="Sequential Looks",
+                hypothesis="A shorter checkout will increase completed purchases.",
+                owner="Growth Checkout",
+                runtime_days=9,
+                audience="Returning web shoppers",
             ),
             _scenario_payload(
                 name="No fake winner",
@@ -228,11 +371,16 @@ def demo_scenarios():
                     experiment_id="demo-ui-no-diff",
                     primary_metric_column="converted",
                     metric_type="proportion",
+                    baseline_rate=0.10,
+                    minimum_detectable_effect=0.05,
                     max_looks=5,
                 ),
                 badge="no_winner",
                 badge_text="No winner",
-                side_title="Final Look",
+                hypothesis="A stronger CTA will increase completed purchases.",
+                owner="Growth Checkout",
+                runtime_days=14,
+                audience="Returning web shoppers",
             ),
             _scenario_payload(
                 name="Guardrail catches risk",
@@ -242,6 +390,8 @@ def demo_scenarios():
                     experiment_id="demo-ui-guardrail",
                     primary_metric_column="converted",
                     metric_type="proportion",
+                    baseline_rate=0.10,
+                    minimum_detectable_effect=0.05,
                     guardrails=[
                         GuardrailConfig(
                             name="session_minutes",
@@ -253,8 +403,12 @@ def demo_scenarios():
                 ),
                 badge="guardrail",
                 badge_text="Regression",
-                side_title="Guardrail Verdict",
+                hypothesis="An urgency message will increase completed purchases without hurting engagement.",
+                owner="Lifecycle Growth",
+                runtime_days=11,
+                audience="Active web shoppers",
             ),
+            _real_data_scenario(),
         ]
     }
 

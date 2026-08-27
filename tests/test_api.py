@@ -7,11 +7,26 @@ from src.api.main import (
     ExperimentIn,
     ExtendMaxLooksIn,
     create_experiment,
+    demo_scenarios,
     extend_max_looks,
     get_results,
     log_event,
     verify_experiment_access,
 )
+
+
+def test_demo_scenarios_expose_decision_context():
+    scenarios = demo_scenarios()["scenarios"]
+
+    assert len(scenarios) == 4
+    for scenario in scenarios:
+        assert scenario["hypothesis"]
+        assert scenario["owner"]
+        assert scenario["primary_metric"]
+        assert len(scenario["ci_pp"]) == 2
+        assert set(scenario["group_sizes"]) == {"control", "treatment"}
+        assert "passed" in scenario["srm"]
+        assert isinstance(scenario["incremental_per_100k"], int)
 
 
 def test_results_reports_insufficient_data_when_one_group_empty():

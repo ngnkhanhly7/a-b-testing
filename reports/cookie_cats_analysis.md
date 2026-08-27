@@ -9,17 +9,17 @@ OK, no mismatch.
 
 ## Retention Day 1
 
-Không đủ bằng chứng để kết luận có khác biệt giữa 2 nhóm (p=0.0744 >= alpha=0.05).
+Not enough evidence to conclude a difference between the two groups (p=0.0744 >= alpha=0.05).
 (control=0.4482, treatment=0.4423, p=0.07441)
 
 ## Retention Day 7
 
-Treatment thấp hơn Control 4.31% (chênh lệch tuyệt đối -0.0082), tin cậy 95%, CI: [-0.0133, -0.0031].
+Treatment is lower than Control by 4.31% (absolute difference -0.0082), 95% confidence, CI: [-0.0133, -0.0031].
 (control=0.1902, treatment=0.1820, p=0.001554)
 
 ## Game rounds played (first week)
 
-Không đủ bằng chứng để kết luận có khác biệt giữa 2 nhóm (p=0.3759 >= alpha=0.05).
+Not enough evidence to conclude a difference between the two groups (p=0.3759 >= alpha=0.05).
 (control mean=52.46, treatment mean=51.30, p=0.3759)
 
 ## Conclusion
